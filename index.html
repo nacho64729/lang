@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+    </head>
+
+    <body>
+        <!-- HEAD -->
+        <div id="head-placeholder"></div>
+
+        <!-- MAIN CONTENT -->
+        <div class="box">
+            <a href="vocab.html?lang=korean">한영 사전 연습</a><br>
+            <a href="vocab.html?lang=chinese">中英翻译实践</a><br>
+            <a href="vocab.html?lang=hiragana_monographs">ひらがなを練習する</a><br>
+            <a href="vocab.html?lang=my_korean">korean</a><br>
+            <a href="chin.html">practice chinese</a>
+        </div>
+
+		<!-- NAVIGATION BAR -->
+        <div id="nav-placeholder"></div>
+
+		<!-- SCRIPT -->
+        <script>
+            async function includeHTML(file, elementId) {
+                try {
+                    const response = await fetch(file);
+                    if (!response.ok) {
+                        throw new Error(`Error fetching ${file}: ${response.statusText}`);
+                    }
+
+                    const content = await response.text();
+                    const placeholder = document.getElementById(elementId);
+
+                    // Replace the placeholder with the loaded content
+                    placeholder.outerHTML = content;
+
+                    // Re-execute all scripts in the included content
+                    const tempDiv = document.createElement("div");
+                    tempDiv.innerHTML = content;
+                    const scripts = tempDiv.querySelectorAll("script");
+
+                    scripts.forEach((script) => {
+                        const newScript = document.createElement("script");
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+                        document.body.appendChild(newScript);
+                    });
+                } catch (error) {
+                    console.error("Failed to load content:", error);
+                    document.getElementById(elementId).textContent = "Failed to load content.";
+                }
+            }
+
+            includeHTML("partials/head.html", "head-placeholder");
+            includeHTML("partials/nav.html", "nav-placeholder");
+        </script>		
+    </body>
+</html>

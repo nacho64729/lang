@@ -1,0 +1,2 @@
+enoculus;mypassword
+test_user;test_pass

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+    </head>
+
+    <body>
+        <!-- HEAD -->
+        <div id="head-placeholder"></div>
+
+        <!-- MAIN CONTENT -->
+        <div class="box">
+            <h1 id="page-title">Vocabulary Practice</h1>
+
+            <div id="wordBox">Word: <span id="currentWord"></span></div><br>
+            <input type="text" id="inputBox" placeholder="Enter your answer here..." />
+            <button id="checkButton">Check</button>
+            <button id="answerButton">Show Answer</button>
+            <div id="message"></div>
+            <div id="solution"></div>
+        </div>
+        <button id="saveChangesButton">Save progress</button></div>
+        <br><br>
+
+        <!-- SCRIPT -->
+        <script>
+            async function includeHTML(file, elementId) {
+                try {
+                    const response = await fetch(file);
+                    if (!response.ok) {
+                        throw new Error(`Error fetching ${file}: ${response.statusText}`);
+                    }
+
+                    const content = await response.text();
+                    document.getElementById(elementId).outerHTML = content;
+                } catch (error) {
+                    console.error("Failed to load content:", error);
+                    document.getElementById(elementId).textContent = "Failed to load content.";
+                }
+            }
+
+            includeHTML("partials/head.html", "head-placeholder");
+            includeHTML("partials/nav.html", "nav-placeholder");
+
+            // Page-specific configuration
+            const pageConfig = {
+                korean: {
+                    tsv: "dicts/korean_vocab.tsv",
+                    title: "한영 사전 연습",
+                    type_here: "여기 한글 입력하세요...",
+                },
+                chinese: {
+                    tsv: "dicts/chinese_vocab.tsv",
+                    title: "中英翻译实践",
+                    type_here: "在这里输入中文词汇",
+                },
+                hiragana_monographs: {
+                    tsv: "dicts/hiragana_monographs.tsv",
+                    title: "ひらがな五十音（発音区別符号付き）",
+                    type_here: "ここに入力..."
+                },
+                my_korean: {
+                    tsv: "dicts/my_korean.tsv",
+                    title: "my korean",
+                    type_here: "여기 한글 입력하세요..."
+                }
+            };
+
+            const urlParams = new URLSearchParams(window.location.search);
+        const lang = urlParams.get("lang") || "chinese"; // Default to "chinese" if "lang" is not provided
+
+        // Check if the lang value is valid in pageConfig
+        if (!pageConfig[lang]) {
+            console.warn(`Invalid lang value: ${lang}. Falling back to default "chinese".`);
+            lang = "chinese"; // Fallback to a default language if the lang is invalid
+        }
+
+            // Dynamic content updates
+            document.getElementById("page-title").textContent = pageConfig[lang].title;
+            document.getElementById("inputBox").placeholder = pageConfig[lang].type_here;
+
+
+
+            
+            let pairs = [];
+            let currentPair = {};
+            let prob_dist;
+            let changes = {}; // To track updates to the weights
+            const wordBox = document.getElementById("currentWord");
+            const messageElement = document.getElementById("message");
+            const inputBox = document.getElementById("inputBox");
+            const solutionElement = document.getElementById("solution");
+
+            async function loadTSVFile() {
+                try {
+                    // Fetch the .tsv file
+                    const response = await fetch(pageConfig[lang].tsv);
+                    const tsvText = await response.text();
+
+                    // Parse the file into lines and extract pairs
+                    const lines = tsvText.trim().split("\n");
+                    pairs = lines.map(line => {
+                        const [answer, hint] = line.split("\t"); // Extract answer and hint
+                        return { answer: answer.trim(), hint: hint.trim() };
+                    });
+
+                    // Probability distribution
+                    if (typeof lines[0].split("\t")[2] !== "undefined") {
+                        // Parse weights as numbers and take inverse
+                        prob_dist = lines.map(line => parseFloat(line.split("\t")[2]));
+                        prob_dist = prob_dist.map(weight => 1 / weight);
+                    } else {
+                        // Fallback to uniform distribution
+                        console.log("Notice: Pair selection probabilities not found. Using uniform distribution.");
+                        prob_dist = Array(lines.length).fill(1);  
+                    }
+
+                    // Normalize the probabilities so they sum to 1
+                    const sum = prob_dist.reduce((partialSum, value) => partialSum + value, 0);
+                    prob_dist = prob_dist.map(value => value / sum);
+
+                    generateNewPair();
+                    
+                } catch (error) {
+                    console.error("Error loading the TSV file:", error); // Log the error for debugging
+                    messageElement.textContent = "Error loading the word list. Please try again.";
+                    messageElement.style.color = "red";
+                }
+            }
+
+
+            let first_try = true;
+            function generateNewPair() {
+                if (pairs.length === 0) {
+                    messageElement.textContent = "No words available!";
+                    return;
+                }
+
+                // Create cumulative probabilities
+                const cumulative = [];
+                prob_dist.reduce((acc, curr) => {
+                    cumulative.push(acc + curr);
+                    return acc + curr;
+                }, 0);
+
+                // Generate a random number between 0 and 1
+                const rand = Math.random();
+
+                // Find the index based on the random number
+                const index = cumulative.findIndex(prob => rand <= prob);
+
+                // Select the pair
+                currentPair = pairs[index];
+                wordBox.textContent = currentPair.hint; // Display the hint
+                messageElement.textContent = ""; // Clear messages
+                inputBox.value = ""; // Clear input
+            }
+
+
+            function checkWord() {
+                const userInput = inputBox.value.trim().toLowerCase();
+                if (userInput === currentPair.answer.toLowerCase()) {
+                    messageElement.textContent = "Correct!";
+                    messageElement.style.color = "green";
+
+                    if (first_try) {
+                        // Increment the weight in the changes object
+                        if (!changes[currentPair.answer]) {
+                            changes[currentPair.answer] = 1; // Initialize if it doesn't exist
+                        } else {
+                            changes[currentPair.answer] += 1; // Increment the weight
+                        }
+                    }
+
+                    first_try = true;
+                    setTimeout(generateNewPair, 1000);
+                    setTimeout(() => { messageElement.textContent = ""; }, 1000);
+                } else {
+                    messageElement.textContent = "Incorrect! Try again.";
+                    messageElement.style.color = "red";
+                    first_try = false;
+                    setTimeout(() => { messageElement.textContent = ""; }, 1000);
+                }
+            }
+
+
+            function showAnswer() {
+                solutionElement.textContent = currentPair.answer;
+                setTimeout(() => (solutionElement.textContent = ""), 3000);
+            }
+
+            
+            function saveChanges() {
+                // Merge updated weights into pairs
+                pairs.forEach(pair => {
+                    if (changes[pair.answer]) {
+                        // Add the changes to the original weights
+                        pair.weight += changes[pair.answer];
+                    }
+                });
+
+                // Create the updated .tsv file content
+                const updatedTSV = pairs.map(pair => `${pair.answer}\t${pair.hint}\t${pair.weight}`).join("\n");
+
+                // Option 1: Send the updated file to the server (if applicable)
+                fetch('/save-updated-tsv', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: updatedTSV
+                }).then(response => {
+                    if (response.ok) {
+                        alert("Changes saved successfully!");
+                    } else {
+                        alert("Failed to save changes.");
+                    }
+                });
+
+                // Option 2: Download the file locally
+                const blob = new Blob([updatedTSV], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'updated_vocab.tsv';
+                link.click();
+            }
+
+
+            // Add functionality to check and answer buttons
+            document.getElementById("checkButton").addEventListener("click", checkWord);
+            inputBox.addEventListener("keydown", function (event) {
+				if (event.key === "Enter") {
+					checkWord();
+				}
+            });
+            document.getElementById("answerButton").addEventListener("click", showAnswer);
+            document.getElementById("saveChangesButton").addEventListener("click", saveChanges);
+
+            window.addEventListener("beforeunload", (event) => {
+                if (Object.keys(changes).length > 0) {
+                    event.preventDefault();
+                    event.returnValue = "You have unsaved changes. Do you want to leave without saving?";
+                }
+            });
+
+            loadTSVFile();
+
+            
+        </script>
+
+        <!-- NAVIGATION BAR -->
+        <div id="nav-placeholder"></div>
+    </body>
+</html>

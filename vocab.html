@@ -13,14 +13,14 @@
       <h1 id="page-title">Vocabulary Practice</h1>
 
       <div id="statusBar" style="margin-bottom:8px;">
-        <span id="remainingLabel">Remaining: <span id="remainingCount">—</span></span>
+        <span id="remainingLabel">Words remaining: <span id="remainingCount">—</span></span>
       </div>
 
-      <div id="wordBox">Word: <span id="currentWord"></span></div>
+      <div id="wordBox">word: <span id="currentWord"></span></div>
       <br />
       <input type="text" id="inputBox" placeholder="Enter your answer here..." />
       <button id="checkButton">Check</button>
-      <button id="answerButton">Show Answer</button>
+      <button id="answerButton">Show answer</button>
       <div id="message" style="margin-top:6px;"></div>
       <div id="solution" style="margin-top:4px; font-weight:bold;"></div>
     </div>
@@ -127,7 +127,7 @@
           });
 
           if (pairs.length === 0) {
-            messageElement.textContent = "No words available!";
+            messageElement.textContent = "No words available";
             messageElement.style.color = "red";
             return;
           }
@@ -146,26 +146,33 @@
         }
       }
 
-      function nextPair() {
-        solutionElement.textContent = ""; // clear shown answer
-        if (order.length === 0) {
-          // Finished every item exactly once
-          wordBox.textContent = "";
-          messageElement.textContent = "🎉 Done! You've gone through every word once.";
-          messageElement.style.color = "green";
-          updateRemainingCount();
-          return;
-        }
+			function nextPair() {
+				solutionElement.textContent = ""; // clear shown answer
 
-        currentIndex = order.shift(); // take next index once
-        const currentPair = pairs[currentIndex];
-        wordBox.textContent = currentPair.hint;
-        messageElement.textContent = "";
-        inputBox.value = "";
-        first_try = true;
+				if (order.length === 0) {
+					// finished one full cycle, so reshuffle and reset
+					order = pairs.map((_, i) => i);
+					fisherYatesShuffle(order);
 
-        updateRemainingCount();
-      }
+					messageElement.textContent = "Restarting...";
+					messageElement.style.color = "green";
+
+					setTimeout(() => {
+						messageElement.textContent = "";
+						nextPair();
+					}, 1000);
+					return;
+				}
+
+				currentIndex = order.shift(); // take next index once
+				const currentPair = pairs[currentIndex];
+				wordBox.textContent = currentPair.hint;
+				messageElement.textContent = "";
+				inputBox.value = "";
+				first_try = true;
+
+				updateRemainingCount();
+			}
 
       function checkWord() {
         if (currentIndex === null) return;
@@ -188,7 +195,7 @@
             nextPair();
           }, 600);
         } else {
-          messageElement.textContent = "Incorrect! Try again.";
+          messageElement.textContent = "Incorrect. Try again.";
           messageElement.style.color = "red";
           first_try = false;
           // keep same item; do not advance

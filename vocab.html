@@ -10,7 +10,7 @@
 
     <!-- MAIN CONTENT -->
     <div class="box">
-      <h1 id="page-title">Vocabulary Practice</h1>
+      <h1 id="page-title" style="font-size:28px;">Vocabulary Practice</h1>
 
       <div id="statusBar" style="margin-bottom:8px;">
         <span id="remainingLabel">Words remaining: <span id="remainingCount">—</span></span>
@@ -49,30 +49,30 @@
 
       // Page-specific configuration
       const pageConfig = {
-        korean: {
-          tsv: "dicts/korean_vocab.tsv",
-          title: "한영 사전 연습",
-          type_here: "여기 한글 입력하세요...",
-        },
         chinese: {
           tsv: "dicts/chinese_vocab.tsv",
-          title: "中英翻译实践",
-          type_here: "在这里输入中文词汇",
+          title: "中英翻译练习",
+          type_here: "在这里输入中文词汇...",
         },
         hiragana_monographs: {
           tsv: "dicts/hiragana_monographs.tsv",
-          title: "ひらがな五十音（発音区別符号付き）",
-          type_here: "ここに入力..."
+          title: "ひらがな五十音の練習（発音区別符号付き）",
+          type_here: "ここに入力...",
         },
         katakana_monographs: {
           tsv: "dicts/katakana_monographs.tsv",
-          title: "カタカナ五十音（発音区別符号付き）",
-          type_here: "ここに入力..."
+          title: "カタカナ五十音の練習（発音区別符号付き）",
+          type_here: "ここに入力...",
         },
-        my_korean: {
-          tsv: "dicts/my_korean.tsv",
-          title: "my korean",
-          type_here: "여기 한글 입력하세요..."
+        general_korean: {
+          tsv: "dicts/general_korean.tsv",
+          title: "한영 일반 단어 연습",
+          type_here: "여기 한글을 입력하세요...",
+        },
+        personal_korean: {
+          tsv: "dicts/personal_korean.tsv",
+          title: "한영 개인 단어 연습",
+          type_here: "여기 한글을 입력하세요...",
         }
       };
 

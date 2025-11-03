@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Vocabulary Practice</title>
+    </head>
+
+    <body>
+        <!-- HEAD -->
+        <div id="head-placeholder"></div>
+
+        <!-- MAIN CONTENT -->
+        <label for="vocabList">vocab list:</label>
+        <select id="vocabList"></select>
+
+        <div class="box">
+            <!-- <h1 id="page-title">日英翻訳練習</h1> -->
+
+            <div id="wordsLeft">Number of words left: 0</div><br>
+            <div id="wordBox"><b>Translate word: </b><span id="currentWord"></span></div><br>
+
+            <input type="text" id="japanInput" placeholder="ここに入力..." /><br><br>
+
+            <button id="checkButton">Check</button>
+            <button id="answerButton">Show Answer</button>
+            <button id="skipButton">Skip</button>
+            <div id="message"></div>
+            <div id="solution"></div>
+        </div>
+        <br><br>
+
+        <!-- NAVIGATION BAR -->
+        <div id="nav-placeholder"></div>
+
+        <!-- SCRIPT -->
+        <script>
+            /////////////////////////
+            // SELECT A VOCAB LIST //
+            /////////////////////////
+            const optionsList = [
+                "あいさつ　(Greetings)",
+                "第1課：あたらしいともだち　(New Friends)",
+                "第2課：かいもの　(Shopping)",
+                "第3課：デートの約束　 (Making a Date)",
+                "第4課：初めてのデート　(The First Date)",
+                "第5課：沖縄旅行　(A Trip to Okinawa)",
+                "第6課：ロバートさんの一日　(A Day in Robert's Life)",
+                "第7課：家族の写真　(Family Picture)",
+                "第8課：バーベキュー　(Barbecue)",
+                "第9課：かぶき　(Kabuki)",
+                "第10課：冬休みの予定　(Winter Vacation Plans)",
+                "第11課：休みのあと　(After the Vacation)",
+                "第12課：病気　(Illness)"
+            ];
+            let tsv_name = optionsList[0] + ".tsv";
+            const dropdown = document.getElementById("vocabList");
+            // Loop through the list and add options to the dropdown
+            optionsList.forEach(optionText => {
+                let option = document.createElement("option");
+                option.value = optionText.toLowerCase().replace(/\s+/g, "-"); // Convert to a safe value
+                option.textContent = optionText;
+                dropdown.appendChild(option);
+            });
+            dropdown.addEventListener("change", function () {
+                let selectedText = dropdown.options[dropdown.selectedIndex].text;
+                tsv_name = selectedText + ".tsv";
+                loadTSVFile();
+            });
+            /////////////////////////
+            /////////////////////////
+
+            
+
+            async function includeHTML(file, elementId) {
+                try {
+                    const response = await fetch(file);
+                    if (!response.ok) {
+                        throw new Error(`Error fetching ${file}: ${response.statusText}`);
+                    }
+
+                    const content = await response.text();
+                    document.getElementById(elementId).outerHTML = content;
+                } catch (error) {
+                    console.error("Failed to load content:", error);
+                    document.getElementById(elementId).textContent = "Failed to load content.";
+                }
+            }
+
+            includeHTML("partials/head.html", "head-placeholder");
+            includeHTML("partials/nav.html", "nav-placeholder");
+
+            // Initialize variables
+            let pairs = [];
+            let currentPair = {};
+            let prob_dist = [];
+            let changes = {};
+            let first_try = true;
+
+            // DOM elements
+            const wordBox = document.getElementById("currentWord");
+            const japanInput = document.getElementById("japanInput");
+            const messageElement = document.getElementById("message");
+            const solutionElement = document.getElementById("solution");
+
+
+            let unusedPairs = [...pairs]; // Create a copy of the pairs array for tracking unused pairs
+            function generateNewPair() {
+                // Check if there are any unused pairs left
+                if (unusedPairs.length === 0) {
+                    // Reset unusedPairs if all pairs have been used
+                    unusedPairs = [...pairs];
+                    console.log("All pairs used. Resetting...");
+                }
+
+                // Select a random index from the unusedPairs array
+                const randomIndex = Math.floor(Math.random() * unusedPairs.length);
+
+                // Retrieve and remove the selected pair from unusedPairs
+                currentPair = unusedPairs.splice(randomIndex, 1)[0];
+
+                // Update the UI
+                wordBox.textContent = currentPair.eng;
+                japanInput.value = "";
+                messageElement.textContent = "";
+
+                // Update the "Words Left" counter
+                updateWordsLeft();
+            }
+
+
+            function updateWordsLeft() {
+                const wordsLeftElement = document.getElementById("wordsLeft");
+                wordsLeftElement.textContent = `Words Left: ${unusedPairs.length}`;
+            }
+
+
+            // Load and parse the TSV file
+            async function loadTSVFile() {
+                try {
+                    const response = await fetch("dicts/genki/" + tsv_name);
+                    const tsvText = await response.text();
+
+                    const lines = tsvText.trim().split("\n");
+                    pairs = lines.map(line => {
+                        const [japan, eng] = line.split("\t");
+                        return {
+                            japan: japan?.trim() || "",
+                            eng: eng?.trim() || "",
+                        };
+                    });
+
+                    // Initialize unusedPairs and update the counter
+                    unusedPairs = [...pairs];
+                    updateWordsLeft();
+
+                    generateNewPair();
+                } catch (error) {
+                    console.error("Error loading the TSV file:", error);
+                    messageElement.textContent = "Error loading the word list. Please try again.";
+                    messageElement.style.color = "red";
+                }
+            }
+
+            function loadWord() {
+                setTimeout(() => {
+                        generateNewPair();
+                        japanInput.focus();
+                    }, 1000);
+            }
+
+
+            function checkWord() {
+                const userJapan = japanInput.value.trim();
+                const correctJapan = currentPair.japan;
+
+                if (userJapan === correctJapan) {
+                    messageElement.textContent = "Correct!";
+                    messageElement.style.color = "green";
+                    first_try && (changes[currentPair.eng] = (changes[currentPair.eng] || 0) + 1);
+                    first_try = true;
+                    loadWord();
+
+                } else {
+                    messageElement.textContent = "Incorrect! Try again.";
+                    messageElement.style.color = "red";
+                    first_try = false;
+                }
+            }
+
+            function showAnswer() {
+                solutionElement.textContent = `${currentPair.japan}`;
+                setTimeout(() => (solutionElement.textContent = ""), 3000);
+            }
+
+            const textInput = document.getElementById("japanInput");
+            function insertCharacter(character) {
+                const start = textInput.selectionStart;
+                const end = textInput.selectionEnd;
+                const text = textInput.value;
+
+                // Insert the character and update the value
+                textInput.value = text.slice(0, start) + character + text.slice(end);
+
+                // Move the cursor to the position after the inserted character
+                textInput.setSelectionRange(start + character.length, start + character.length);
+                textInput.focus();
+            }
+
+            // Event Listeners
+            document.getElementById("checkButton").addEventListener("click", checkWord);
+            japanInput.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    checkWord();
+                } else if (event.key === "Tab") {
+                    event.preventDefault();
+                    japanInput.focus();
+                }
+            });
+            document.getElementById("answerButton").addEventListener("click", showAnswer);
+
+            loadTSVFile();
+        </script>
+    </body>
+</html>

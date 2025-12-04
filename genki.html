@@ -217,6 +217,17 @@
                 }
             });
             document.getElementById("answerButton").addEventListener("click", showAnswer);
+            document.getElementById("skipButton").addEventListener("click", function () {
+                first_try = true;
+                messageElement.textContent = "";
+                solutionElement.textContent = "";
+
+                setTimeout(() => {
+                    generateNewPair();
+                    japanInput.focus();
+                }, 1000); // 1-second delay
+            });
+
 
             loadTSVFile();
         </script>
